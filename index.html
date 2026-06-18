@@ -33,6 +33,7 @@
     <p class="sub">열람 비밀번호를 입력하세요</p>
     <form id="f">
       <div class="pwwrap"><input id="pw" type="password" inputmode="text" autocomplete="current-password" placeholder="비밀번호" autofocus><button type="button" id="pwtoggle" aria-label="비밀번호 표시" title="비밀번호 표시"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+      <label id="rememberLabel" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#777;margin-top:10px;margin-bottom:2px;cursor:pointer"><input type="checkbox" id="remember" style="width:auto;margin:0">이 기기에서 비밀번호 기억</label>
       <button id="go" type="submit">열기</button>
       <div class="err" id="err"></div>
     </form>
@@ -51,20 +52,23 @@ async function unlock(pw){
   const plain = await crypto.subtle.decrypt({ name:'AES-GCM', iv:b64(ENC.iv) }, key, b64(ENC.data));
   return new TextDecoder().decode(plain);
 }
-document.getElementById('f').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function doUnlock(pw, remember){
   const err = document.getElementById('err'); const go = document.getElementById('go');
   err.textContent=''; go.disabled=true; go.textContent='여는 중...';
   try {
-    const html = await unlock(document.getElementById('pw').value);
+    const html = await unlock(pw);
+    try { if(remember) localStorage.setItem('mb_pw', pw); else localStorage.removeItem('mb_pw'); } catch(_){}
     document.getElementById('gate').style.display='none';
-    const wrap = document.getElementById('frameWrap'); wrap.style.display='block';
+    document.getElementById('frameWrap').style.display='block';
     document.getElementById('frame').srcdoc = html;
   } catch(_) {
+    try { localStorage.removeItem('mb_pw'); } catch(__){}
     err.textContent='비밀번호가 올바르지 않습니다.';
     go.disabled=false; go.textContent='열기';
   }
-});
+}
+document.getElementById('f').addEventListener('submit', function(e){ e.preventDefault(); doUnlock(document.getElementById('pw').value, document.getElementById('remember').checked); });
+(function(){ try { var saved = localStorage.getItem('mb_pw'); if (saved) { document.getElementById('pw').value = saved; document.getElementById('remember').checked = true; doUnlock(saved, true); } } catch(_){} })();
 
 (function(){var EYE='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';var OFF='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';var t=document.getElementById("pwtoggle");if(!t)return;t.addEventListener("click",function(){var pw=document.getElementById("pw");if(pw.type==="password"){pw.type="text";t.innerHTML=OFF;t.title="비밀번호 숨기기";}else{pw.type="password";t.innerHTML=EYE;t.title="비밀번호 표시";}pw.focus();});})();
 </script>
